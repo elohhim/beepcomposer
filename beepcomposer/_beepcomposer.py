@@ -30,23 +30,15 @@ try:
     from winsound import Beep
 
 
-    def play_beep(frequency, duration):
+    def do_beep(frequency, duration):
         try:
-            Beep(frequency, int(duration))
+            Beep(int(frequency), int(duration))
         except ValueError:
             logging.warning("Frequency %f not supported by winsound backend.",
                             frequency)
             time.sleep(duration / 1000)
 except ImportError:
     raise OSError("Operating system not supported")
-
-
-def play_note(note: Note, beat: int, bpm: int, pitch_dict):
-    frequency = int(pitch_dict[note.pitch])
-    dot_factor = 1.0 + sum(2 ** -(n + 1) for n in range(note.dots))
-    value = note.value if note.value else beat
-    duration = (60_000 / bpm) * (beat / value) * dot_factor
-    play_beep(frequency, duration)
 
 
 def parse_note(note: Note):
@@ -67,7 +59,7 @@ class Composer(object):
         self._bpm = bpm
         self._beat = beat
         self._a4 = a4
-        self._pitch_dict = self.init_pitch_dict(a4)
+        self._pitch_dict = self.init_pitch_dict()
         self._notes = None
 
     def init_pitch_dict(self):
@@ -90,5 +82,13 @@ class Composer(object):
     def play(self):
         """Plays composed melody."""
         for note in self._notes:
-            play_note(note, self._beat, self._bpm, self._pitch_dict)
+            self._play_note(note)
         return self
+
+    def _play_note(self, note: Note):
+        """Plays one note."""
+        frequency = self._pitch_dict[note.pitch]
+        dot_factor = 1.0 + sum(2 ** -(n + 1) for n in range(note.dots))
+        value = note.value if note.value else self._beat
+        duration = (60_000 / self._bpm) * (self._beat / value) * dot_factor
+        do_beep(frequency, duration)
