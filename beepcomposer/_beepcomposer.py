@@ -1,8 +1,8 @@
 import logging
 import re
 import time
-from collections import namedtuple
-from typing import Union, Sequence
+from typing import Union, Sequence, Dict
+from dataclasses import dataclass
 
 note_regexp = re.compile(r"^([CDFGA]([0-9]|10)#?|[EB]([0-9]|10))"
                          r"(-([1248]|16|32|64)(\.{0,3}))?$")
@@ -24,13 +24,11 @@ BUGLE_CHARGE_MELODY = (("C5-8. C5-16 C5-8. C5-16 C5-8. C5-16 " * 2
 MELODIES = {"charge": CHARGE_MELODY,
             "bugle_charge": BUGLE_CHARGE_MELODY}
 
-Note = namedtuple('Note', 'pitch value dots')
-
 try:
     from winsound import Beep
 
 
-    def do_beep(frequency, duration):
+    def do_beep(frequency, duration) -> None:
         try:
             Beep(int(frequency), int(duration))
         except ValueError:
@@ -41,15 +39,23 @@ except ImportError:
     raise OSError("Operating system not supported")
 
 
-def parse_note(note: Note):
-    match = note_regexp.match(note)
-    if match:
-        pitch = match[1]
-        value = int(match[5]) if match[5] else None
-        dots = len(match[6]) if match[6] else 0
-        return Note(pitch, value, dots)
-    else:
-        raise ValueError(f"Note {note} is not correct format.")
+@dataclass
+class Note(object):
+    """Note representation."""
+    pitch: str
+    value: int
+    dots: int
+
+    @classmethod
+    def parse(cls, note: str) -> 'Note':
+        match = note_regexp.match(note)
+        if match:
+            pitch = match[1]
+            value = int(match[5]) if match[5] else None
+            dots = len(match[6]) if match[6] else 0
+            return Note(pitch, value, dots)
+        else:
+            raise ValueError(f"Note {note} is not correct format.")
 
 
 class Composer(object):
@@ -59,12 +65,13 @@ class Composer(object):
         self._bpm = bpm
         self._beat = beat
         self._a4 = a4
-        self._pitch_dict = self.init_pitch_dict()
+        self._pitch_dict = self._init_pitch_dict()
         self._notes = None
 
-    def init_pitch_dict(self):
+    def _init_pitch_dict(self) -> Dict[str, float]:
         """Initialize pitch dictionary."""
-        tmplt = "C{n} C{n}# D{n} D{n}# E{n} F{n} F{n}# G{n} G{n}# A{n} A{n}# B{n}"
+        tmplt = ("C{n} C{n}# D{n} D{n}# E{n} F{n} F{n}# G{n} G{n}# A{n} A{n}# "
+                 "B{n}")
         notes = " ".join(tmplt.format(n=n) for n in range(11)).split()
 
         def freq(n):
@@ -76,16 +83,16 @@ class Composer(object):
         """Compose melody from notes."""
         if isinstance(notes, str):
             notes = notes.split()
-        self._notes = [parse_note(note) for note in notes]
+        self._notes = [Note.parse(note) for note in notes]
         return self
 
-    def play(self):
+    def play(self) -> 'Composer':
         """Plays composed melody."""
         for note in self._notes:
             self._play_note(note)
         return self
 
-    def _play_note(self, note: Note):
+    def _play_note(self, note: Note) -> None:
         """Plays one note."""
         frequency = self._pitch_dict[note.pitch]
         dot_factor = 1.0 + sum(2 ** -(n + 1) for n in range(note.dots))
