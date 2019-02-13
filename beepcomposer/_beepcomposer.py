@@ -27,7 +27,6 @@ MELODIES = {"charge": CHARGE_MELODY,
 try:
     from winsound import Beep
 
-
     def do_beep(frequency, duration) -> None:
         try:
             Beep(int(frequency), int(duration))
@@ -36,7 +35,8 @@ try:
                             frequency)
             time.sleep(duration / 1000)
 except ImportError:
-    raise OSError("Operating system not supported")
+    def do_beep(frequency, duration) -> None:
+        raise OSError("Operating system not supported. Can't play sound")
 
 
 @dataclass
