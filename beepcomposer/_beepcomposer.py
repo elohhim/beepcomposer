@@ -48,10 +48,13 @@ class Note(object):
 
     @classmethod
     def parse(cls, note: str) -> 'Note':
+        """Parses Note from string.
+
+        Examples of correct note strings: 'C1', 'C2#', 'C3-2', 'C4-4.'"""
         match = note_regexp.match(note)
         if match:
             pitch = match[1]
-            value = int(match[5]) if match[5] else None
+            value = int(match[5]) if match[5] else NOTE_VALUES["whole"]
             dots = len(match[6]) if match[6] else 0
             return Note(pitch, value, dots)
         else:
